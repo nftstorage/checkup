@@ -1,0 +1,27 @@
+{
+  "name": "checkup",
+  "version": "0.0.0",
+  "description": "A tool to check up on data stored in dotStorage, ensuring it is available and retrievable.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=backup:* node bin.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "check",
+    "verify",
+    "available",
+    "retrievable",
+    "dht",
+    "ipfs"
+  ],
+  "author": "Alan Shaw",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^4.3.3",
+    "dotenv": "^16.0.0",
+    "it-pipe": "^2.0.3",
+    "pg": "^8.7.3"
+  }
+}
