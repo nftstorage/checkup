@@ -1,11 +1,10 @@
-import pipe from 'it-pipe'
+import { pipe } from 'it-pipe'
 import debug from 'debug'
 import pg from 'pg'
 import { IpfsCheckClient } from './ipfs-check-client.js'
-import { getCandidate } from './candidate.js'
+import { getSample } from './sample.js'
 import { checkCid } from './check.js'
-import { generateReport } from './report.js'
-import { createServer } from './prom.js'
+import { create } from './prom.js'
 
 const log = debug('checkup:index')
 const INTERVAL = 1000 * 60 * 5
@@ -28,16 +27,31 @@ export async function startCheckup ({
   log('creating IPFS check client...')
   const ipfsChecker = new IpfsCheckClient(ipfsCheckEndpoint)
 
-  let report
-  const server = createServer(() => report)
+  const { metrics, server } = create(process.env.PROM_NAMESPACE)
   server.listen(port)
 
   try {
     while (true) {
-      report = await pipe(
-        getCandidate(db),
+      await pipe(
+        getSample(db),
         checkCid(ipfsChecker),
-        generateReport
+        async source => {
+          for await (const data of source) {
+            metrics.samplesTotal.inc({ peer: data.peerId })
+            if (data.result.ConnectionError) {
+              metrics.connectionErrorsTotal.inc({ peer: data.peerId })
+            }
+            metrics.dhtProviderRecordsTotal.inc({
+              peer: data.peerId,
+              found: data.result.CidInDHT
+            })
+            metrics.bitswapDurationSeconds.inc({
+              peer: data.peerId,
+              responded: data.result.DataAvailableOverBitswap.Responded,
+              found: data.result.DataAvailableOverBitswap.Found
+            }, data.result.DataAvailableOverBitswap.Duration / 1e+9)
+          }
+        }
       )
       await new Promise(resolve => setTimeout(resolve, INTERVAL))
     }

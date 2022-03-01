@@ -19,9 +19,20 @@
   "author": "Alan Shaw",
   "license": "MIT",
   "dependencies": {
+    "@nftstorage/ipfs-cluster": "^4.0.0",
+    "@web-std/fetch": "^4.0.0",
     "debug": "^4.3.3",
     "dotenv": "^16.0.0",
     "it-pipe": "^2.0.3",
-    "pg": "^8.7.3"
-  }
+    "pg": "^8.7.3",
+    "prom-client": "^14.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nftstorage/checkup.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nftstorage/checkup/issues"
+  },
+  "homepage": "https://github.com/nftstorage/checkup#readme"
 }
