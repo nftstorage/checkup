@@ -1,5 +1,11 @@
 import debug from 'debug'
 
+/**
+ * @typedef {import('./sample').Sample} Sample
+ * @typedef {import('./ipfs-check-client').IpfsCheckResult} IpfsCheckResult
+ * @typedef {{ result: IpfsCheckResult } & Sample} CheckedSample
+ */
+
 const log = debug('checkup:check')
 
 /**
@@ -7,15 +13,16 @@ const log = debug('checkup:check')
  */
 export function checkCid (checker) {
   /**
-   * @param {ReturnType<ReturnType<import('./sample').getSample>>} source
+   * @param {AsyncIterable<Sample>} source
    */
   return async function * (source) {
-    // TODO: parallelise
     for await (const sample of source) {
       log(`checking sample ${sample.cid} @ ${sample.peer}`)
       try {
         const result = await checker.check(sample.cid, `/p2p/${sample.peer}`)
-        yield { cid: sample.cid, peer: sample.peer, result }
+        /** @type {CheckedSample} */
+        const checkedSample = { ...sample, result }
+        yield checkedSample
       } catch (err) {
         log(`failed to checkup on: ${sample.cid}`, err)
       }

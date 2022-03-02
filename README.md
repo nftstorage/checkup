@@ -1,6 +1,6 @@
 # Checkup
 
-A tool to check up on data stored in dotStorage, ensuring it is available and retrievable. It continuously takes random samples of 1,000 CIDs and creates a report exposed as prometheus metrics. Each new report overwrites the last.
+A tool to check up on data stored in dotStorage, ensuring it is available and retrievable. It continuously takes random samples of CIDs and exposes prometheus metrics on their availability.
 
 ## Usage
 

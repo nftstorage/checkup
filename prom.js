@@ -1,12 +1,17 @@
-import http from 'http'
 import * as Prom from 'prom-client'
 
-export function create (ns = 'checkup') {
+/**
+ * @typedef {{
+ *   samplesTotal: Prom.Counter
+ *   connectionErrorsTotal: Prom.Counter
+ *   dhtProviderRecordsTotal: Prom.Counter
+ *   bitswapHaveDurationSeconds: Prom.Counter
+ * }} Metrics
+ */
+
+export function createRegistry (ns = 'checkup') {
   return {
-    server: http.createServer(async (_, res) => {
-      res.write(await Prom.register.metrics())
-      res.end()
-    }),
+    registry: Prom.register,
     metrics: {
       samplesTotal: new Prom.Counter({
         name: `${ns}_samples_total`,
@@ -28,6 +33,35 @@ export function create (ns = 'checkup') {
         help: 'Time taken to check the peer HAS the sample CID over bitswap by peer ID.',
         labelNames: ['peer', 'responded', 'found']
       })
+    }
+  }
+}
+
+/**
+ * @param {Metrics} metrics
+ */
+export function recordMetrics (metrics) {
+  /**
+   * @param {AsyncIterable<import('./check').CheckedSample>} source
+   */
+  return async function * (source) {
+    for await (const sample of source) {
+      const { peer, result } = sample
+
+      metrics.samplesTotal.inc({ peer })
+      metrics.dhtProviderRecordsTotal.inc({ peer, found: result.CidInDHT })
+
+      if (result.ConnectionError) {
+        metrics.connectionErrorsTotal.inc({ peer })
+      } else {
+        metrics.bitswapHaveDurationSeconds.inc({
+          peer,
+          responded: result.DataAvailableOverBitswap.Responded,
+          found: result.DataAvailableOverBitswap.Found
+        }, result.DataAvailableOverBitswap.Duration / 1e+9)
+      }
+
+      yield sample
     }
   }
 }

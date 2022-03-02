@@ -11,7 +11,7 @@ import fetch from '@web-std/fetch'
  *     Responded: boolean
  *     Error: string
  *   }
- * }} Output
+ * }} IpfsCheckResult
  */
 
 export class IpfsCheckClient {
@@ -22,6 +22,10 @@ export class IpfsCheckClient {
     this.endpoint = endpoint
   }
 
+  /**
+   * @param {string} cid
+   * @param {string} multiaddr
+   */
   async check (cid, multiaddr) {
     const url = new URL(this.endpoint)
     url.searchParams.set('cid', String(cid))
@@ -30,7 +34,7 @@ export class IpfsCheckClient {
     if (!res.ok) {
       throw new Error(`failed to check ${cid} @ ${multiaddr}: ${await res.text()}`)
     }
-    /** @type {Output} */
+    /** @type {IpfsCheckResult} */
     const out = await res.json()
     return out
   }

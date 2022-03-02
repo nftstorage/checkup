@@ -1,6 +1,8 @@
 import debug from 'debug'
 import { randomInt, randomBigInt, sleep } from './utils.js'
 
+/** @typedef {{ cid: string, peer: string }} Sample */
+
 const log = debug('checkup:sample')
 /**
  * 8k max request length to cluster for statusAll, we hit this at around 126 CIDs
@@ -63,6 +65,7 @@ export function getSample (db, cluster) {
         const eligiblePinInfos = pinInfos
           .filter(info => info.status !== 'remote')
           .filter(info => info.status !== 'pin_queued')
+
         const pinInfo = eligiblePinInfos[randomInt(0, eligiblePinInfos.length)]
         if (!pinInfo) {
           log(`⚠️ ${status.cid} no eligible pin statuses`)
@@ -70,10 +73,10 @@ export function getSample (db, cluster) {
         }
 
         log(`sample ready: ${status.cid} @ ${pinInfo.ipfsPeerId} (${pinInfo.status})`)
-        yield { cid: status.cid, peer: pinInfo.ipfsPeerId }
+        /** @type {Sample} */
+        const sample = { cid: status.cid, peer: pinInfo.ipfsPeerId }
+        yield sample
       }
-
-      await sleep(5000)
     }
   }
 }
