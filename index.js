@@ -68,6 +68,7 @@ export async function startCheckup ({
     } catch (err) {
       log('failed to close DB connection:', err)
     }
+    log('closing HTTP server...')
     server.close()
   }
 }
