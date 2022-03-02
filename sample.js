@@ -73,9 +73,7 @@ export function getSample (db, cluster) {
         }
 
         log(`sample ready: ${status.cid} @ ${pinInfo.ipfsPeerId} (${pinInfo.status})`)
-        /** @type {Sample} */
-        const sample = { cid: status.cid, peer: pinInfo.ipfsPeerId }
-        yield sample
+        yield /** @type {Sample} */ ({ cid: status.cid, peer: pinInfo.ipfsPeerId })
       }
     }
   }
