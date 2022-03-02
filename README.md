@@ -8,7 +8,7 @@ Drop a `.env` file in the project root and populate:
 
 ```sh
 DATABASE_CONNECTION=<value>
-IPFS_CHECK_URL=<value>
+IPFS_CHECK_API_URL=<value>
 CLUSTER_API_URL=<value>
 CLUSTER_BASIC_AUTH_TOKEN=<value>
 PORT=3000 # optional, default shown

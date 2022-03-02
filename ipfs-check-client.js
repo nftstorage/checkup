@@ -16,7 +16,7 @@ import fetch from '@web-std/fetch'
 
 export class IpfsCheckClient {
   /**
-   * @param {string} endpoint 
+   * @param {string} endpoint
    */
   constructor (endpoint) {
     this.endpoint = endpoint
