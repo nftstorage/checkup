@@ -1,5 +1,5 @@
 import debug from 'debug'
-import { randomInt, randomBigInt, sleep } from './utils.js'
+import { randomInt, randomBigInt } from './utils.js'
 
 /** @typedef {{ cid: string, peer: string }} Sample */
 
@@ -45,7 +45,6 @@ export function getSample (db, cluster) {
 
       if (!uploads.length) {
         log('⚠️ no uploads')
-        await sleep(5000)
         continue
       }
 
@@ -63,12 +62,11 @@ export function getSample (db, cluster) {
         // status != remote (pinned on another peer in the cluster)
         // status != pin_queued (may not be available on this peer yet)
         const eligiblePinInfos = pinInfos
-          .filter(info => info.status !== 'remote')
-          .filter(info => info.status !== 'pin_queued')
+          .filter(i => i.status !== 'remote' && i.status !== 'pin_queued')
 
         const pinInfo = eligiblePinInfos[randomInt(0, eligiblePinInfos.length)]
         if (!pinInfo) {
-          log(`⚠️ ${status.cid} no eligible pin statuses`)
+          log(`⚠️ ${status.cid} no eligible pin statuses: ${pinInfos.map(i => i.status)}`)
           continue
         }
 

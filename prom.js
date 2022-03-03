@@ -2,10 +2,11 @@ import * as Prom from 'prom-client'
 
 /**
  * @typedef {{
- *   samplesTotal: Prom.Counter
- *   connectionErrorsTotal: Prom.Counter
- *   dhtProviderRecordsTotal: Prom.Counter
- *   bitswapHaveDurationSeconds: Prom.Counter
+ *   samplesTotal: Prom.Counter<'peer'>
+ *   connectionErrorsTotal: Prom.Counter<'peer'>
+ *   dhtProviderRecordsTotal: Prom.Counter<'peer'|'found'>
+ *   bitswapRequestsTotal: Prom.Counter<'peer'|'responded'|'found'>
+ *   bitswapRequestDurationSeconds: Prom.Counter<'peer'|'responded'|'found'>
  * }} Metrics
  */
 
@@ -25,12 +26,17 @@ export function createRegistry (ns = 'checkup') {
       }),
       dhtProviderRecordsTotal: new Prom.Counter({
         name: `${ns}_dht_provider_records_total`,
-        help: 'Provider records found or not found by peer ID.',
+        help: 'Provider records found or not found for a CID for the given peer.',
         labelNames: ['peer', 'found']
       }),
-      bitswapHaveDurationSeconds: new Prom.Counter({
-        name: `${ns}_bitswap_have_duration_seconds`,
-        help: 'Time taken to check the peer HAS the sample CID over bitswap by peer ID.',
+      bitswapRequestsTotal: new Prom.Counter({
+        name: `${ns}_bitswap_requests_total`,
+        help: 'Number of bitswap HAVE messages sent to a peer in order to check the peer HAS the sample CID.',
+        labelNames: ['peer', 'responded', 'found']
+      }),
+      bitswapRequestDurationSeconds: new Prom.Counter({
+        name: `${ns}_bitswap_request_duration_seconds`,
+        help: 'Time taken to check the peer HAS the sample CID over bitswap.',
         labelNames: ['peer', 'responded', 'found']
       })
     }
@@ -54,11 +60,12 @@ export function recordMetrics (metrics) {
       if (result.ConnectionError) {
         metrics.connectionErrorsTotal.inc({ peer })
       } else {
-        metrics.bitswapHaveDurationSeconds.inc({
-          peer,
-          responded: result.DataAvailableOverBitswap.Responded,
-          found: result.DataAvailableOverBitswap.Found
-        }, result.DataAvailableOverBitswap.Duration / 1e+9)
+        const { Responded: responded, Found: found } = result.DataAvailableOverBitswap
+        metrics.bitswapRequestsTotal.inc({ peer, responded, found })
+        metrics.bitswapRequestDurationSeconds.inc(
+          { peer, responded, found },
+          result.DataAvailableOverBitswap.Duration / 1e+9
+        )
       }
 
       yield sample

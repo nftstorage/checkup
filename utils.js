@@ -22,10 +22,3 @@ export function randomBigInt (min, max) {
   }
   return min + (rand % range)
 }
-
-/**
- * @param {number} ms
- */
-export function sleep (ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
