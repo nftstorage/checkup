@@ -2,8 +2,9 @@ import debug from 'debug'
 
 /**
  * @typedef {import('./sample').Sample} Sample
+ * @typedef {import('./peer').PeeredSample} PeeredSample
  * @typedef {import('./ipfs-check-client').IpfsCheckResult} IpfsCheckResult
- * @typedef {{ result: IpfsCheckResult } & Sample} CheckedSample
+ * @typedef {{ result: IpfsCheckResult } & PeeredSample} CheckedSample
  */
 
 const log = debug('checkup:check')
@@ -13,10 +14,16 @@ const log = debug('checkup:check')
  */
 export function checkCid (checker) {
   /**
-   * @param {AsyncIterable<Sample>} source
+   * @param {AsyncIterable<Sample|PeeredSample>} source
+   * @returns {AsyncIterable<Sample|CheckedSample>}
    */
   return async function * (source) {
     for await (const sample of source) {
+      // we can only check samples that have peers
+      if (!sample.peer) {
+        yield sample
+        continue
+      }
       log(`checking sample ${sample.cid} @ ${sample.peer}`)
       try {
         const result = await checker.check(sample.cid, `/p2p/${sample.peer}`)

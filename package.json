@@ -23,6 +23,7 @@
     "@web-std/fetch": "^4.0.0",
     "debug": "^4.3.3",
     "dotenv": "^16.0.0",
+    "it-batch": "^1.0.9",
     "it-pipe": "^2.0.3",
     "pg": "^8.7.3",
     "prom-client": "^14.0.1"

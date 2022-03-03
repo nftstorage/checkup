@@ -6,6 +6,7 @@ import { Cluster } from '@nftstorage/ipfs-cluster'
 import fetch from '@web-std/fetch'
 import { IpfsCheckClient } from './ipfs-check-client.js'
 import { getSample } from './sample.js'
+import { selectPeer } from './peer.js'
 import { checkCid } from './check.js'
 import { createRegistry, recordMetrics } from './prom.js'
 
@@ -56,7 +57,8 @@ export async function startCheckup ({
 
   try {
     await pipe(
-      getSample(db, cluster),
+      getSample(db),
+      selectPeer(cluster),
       checkCid(ipfsChecker),
       recordMetrics(metrics),
       logResult
@@ -74,20 +76,23 @@ export async function startCheckup ({
 }
 
 /**
- * @param {AsyncIterable<import('./check.js').CheckedSample>} source
+ * @param {AsyncIterable<import('./sample').Sample|import('./check').CheckedSample>} source
  */
 async function logResult (source) {
   for await (const { cid, peer, result } of source) {
-    const isOk = !result.ConnectionError &&
+    const isOk = peer &&
+      !result.ConnectionError &&
       result.CidInDHT &&
       result.DataAvailableOverBitswap.Responded &&
       result.DataAvailableOverBitswap.Found
-    log(`${isOk ? '✅' : '❌'} ${cid} @ ${peer}`)
-    log(`\t${result.ConnectionError ? '🔴' : '🟢'} Connect success`)
-    log(`\t${result.CidInDHT ? '🟢' : '🔴'} DHT provider record found`)
-    if (!result.ConnectionError) {
-      log(`\t${result.DataAvailableOverBitswap.Responded ? '🟢' : '🔴'} Bitswap responded`)
-      log(`\t${result.DataAvailableOverBitswap.Found ? '🟢' : '🔴'} Bitswap found`)
+    log(`${isOk ? '✅' : '❌'} ${cid} @ ${peer || 'unknown'}`)
+    if (peer) {
+      log(`\t${result.ConnectionError ? '🔴' : '🟢'} Connect success`)
+      log(`\t${result.CidInDHT ? '🟢' : '🔴'} DHT provider record found`)
+      if (!result.ConnectionError) {
+        log(`\t${result.DataAvailableOverBitswap.Responded ? '🟢' : '🔴'} Bitswap responded`)
+        log(`\t${result.DataAvailableOverBitswap.Found ? '🟢' : '🔴'} Bitswap found`)
+      }
     }
   }
 }

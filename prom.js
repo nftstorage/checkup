@@ -53,19 +53,21 @@ export function recordMetrics (metrics) {
   return async function * (source) {
     for await (const sample of source) {
       const { peer, result } = sample
+      metrics.samplesTotal.inc({ peer: peer || 'unknown' })
 
-      metrics.samplesTotal.inc({ peer })
-      metrics.dhtProviderRecordsTotal.inc({ peer, found: result.CidInDHT })
+      if (peer) {
+        metrics.dhtProviderRecordsTotal.inc({ peer, found: result.CidInDHT })
 
-      if (result.ConnectionError) {
-        metrics.connectionErrorsTotal.inc({ peer })
-      } else {
-        const { Responded: responded, Found: found } = result.DataAvailableOverBitswap
-        metrics.bitswapRequestsTotal.inc({ peer, responded, found })
-        metrics.bitswapRequestDurationSeconds.inc(
-          { peer, responded, found },
-          result.DataAvailableOverBitswap.Duration / 1e+9
-        )
+        if (result.ConnectionError) {
+          metrics.connectionErrorsTotal.inc({ peer })
+        } else {
+          const { Responded: responded, Found: found } = result.DataAvailableOverBitswap
+          metrics.bitswapRequestsTotal.inc({ peer, responded, found })
+          metrics.bitswapRequestDurationSeconds.inc(
+            { peer, responded, found },
+            result.DataAvailableOverBitswap.Duration / 1e+9
+          )
+        }
       }
 
       yield sample
