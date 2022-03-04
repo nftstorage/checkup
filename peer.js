@@ -1,5 +1,6 @@
 import debug from 'debug'
 import batch from 'it-batch'
+import { CID } from 'multiformats'
 import { randomInt } from './utils.js'
 
 /**
@@ -27,12 +28,26 @@ export function selectPeer (cluster) {
       log(`retrieving cluster pin statuses for ${samples.length} CIDs`)
       const statuses = await cluster.statusAll({ cids: samples.map(s => s.cid) })
 
-      for (const status of statuses) {
-        const pinInfos = Object.values(status.peerMap)
+      for (let status of statuses) {
+        let pinInfos = Object.values(status.peerMap)
         if (pinInfos.every(e => e.status === 'unpinned')) {
           log(`⚠️ ${status.cid} is not pinned on ANY peer!`)
-          yield /** @type {Sample} */ ({ cid: status.cid })
-          continue
+          let otherCid
+          try {
+            otherCid = toOtherCidVersion(status.cid)
+          } catch {
+            yield /** @type {Sample} */ ({ cid: status.cid })
+            continue
+          }
+
+          log(`trying other CID version: ${otherCid}`)
+          status = await cluster.status(otherCid)
+          pinInfos = Object.values(status.peerMap)
+          if (pinInfos.every(e => e.status === 'unpinned')) {
+            log(`⚠️ ${otherCid} is not pinned on ANY peer!`)
+            yield /** @type {Sample} */ ({ cid: status.cid })
+            continue
+          }
         }
 
         // pin information where:
@@ -52,4 +67,12 @@ export function selectPeer (cluster) {
       }
     }
   }
+}
+
+/**
+ * @param {string} cidStr
+ */
+function toOtherCidVersion (cidStr) {
+  const cid = CID.parse(cidStr)
+  return String(cid.version === 0 ? cid.toV1() : cid.toV0())
 }

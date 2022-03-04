@@ -25,6 +25,7 @@
     "dotenv": "^16.0.0",
     "it-batch": "^1.0.9",
     "it-pipe": "^2.0.3",
+    "multiformats": "^9.6.4",
     "pg": "^8.7.3",
     "prom-client": "^14.0.1"
   },
