@@ -87,7 +87,11 @@ async function logResult (source) {
       result.DataAvailableOverBitswap.Found
     log(`${isOk ? '✅' : '❌'} ${cid} @ ${peer || 'unknown'}`)
     if (peer) {
-      log(`\t${result.ConnectionError ? '🔴' : '🟢'} Connect success`)
+      if (result.ConnectionError) {
+        log(`\t🔴 Connect success (${result.ConnectionError})`)
+      } else {
+        log('\t🟢 Connect success')
+      }
       log(`\t${result.CidInDHT ? '🟢' : '🔴'} DHT provider record found`)
       if (!result.ConnectionError) {
         log(`\t${result.DataAvailableOverBitswap.Responded ? '🟢' : '🔴'} Bitswap responded`)
