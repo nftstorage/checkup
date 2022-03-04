@@ -10,6 +10,8 @@ startCheckup({
   ipfsCheckEndpoint: mustGetEnv('IPFS_CHECK_API_URL'),
   clusterEndpoint: mustGetEnv('CLUSTER_API_URL'),
   clusterBasicAuthToken: mustGetEnv('CLUSTER_BASIC_AUTH_TOKEN'),
+  clusterStatusBatchSize: process.env.CLUSTER_STATUS_BATCH_SIZE && parseInt(process.env.CLUSTER_STATUS_BATCH_SIZE),
+  sampleMethod: process.env.SAMPLE_METHOD,
   port: process.env.PORT
 })
 

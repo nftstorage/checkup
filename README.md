@@ -11,8 +11,10 @@ DATABASE_CONNECTION=<value>
 IPFS_CHECK_API_URL=<value>
 CLUSTER_API_URL=<value>
 CLUSTER_BASIC_AUTH_TOKEN=<value>
+CLUSTER_STATUS_BATCH_SIZE=120 # optional, default (and maximum) shown
 PORT=3000 # optional, default shown
 PROM_NAMESPACE=checkup # optional, default shown
+SAMPLE_METHOD=universal # optional, default shown, also randomid
 ```
 
 Replace the following values as specified:

@@ -17,14 +17,16 @@ const MAX_CLUSTER_STATUS_CIDS = 120
 
 /**
  * @param {import('@nftstorage/ipfs-cluster').Cluster} cluster
+ * @param {number} [batchSize]
  */
-export function selectPeer (cluster) {
+export function selectPeer (cluster, batchSize) {
+  batchSize = Math.min(batchSize || MAX_CLUSTER_STATUS_CIDS, MAX_CLUSTER_STATUS_CIDS)
   /**
    * @param {AsyncIterable<Sample>} source
    * @returns {AsyncIterable<Sample|PeeredSample>}
    */
   return async function * (source) {
-    for await (const samples of batch(source, MAX_CLUSTER_STATUS_CIDS)) {
+    for await (const samples of batch(source, batchSize)) {
       log(`retrieving cluster pin statuses for ${samples.length} CIDs`)
       const statuses = await cluster.statusAll({ cids: samples.map(s => s.cid) })
 

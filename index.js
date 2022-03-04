@@ -5,7 +5,7 @@ import pg from 'pg'
 import { Cluster } from '@nftstorage/ipfs-cluster'
 import fetch from '@web-std/fetch'
 import { IpfsCheckClient } from './ipfs-check-client.js'
-import { getSample } from './sample.js'
+import { getSampleRandomId, getSample } from './sample.js'
 import { selectPeer } from './peer.js'
 import { checkCid } from './check.js'
 import { createRegistry, recordMetrics } from './prom.js'
@@ -20,6 +20,10 @@ const log = debug('checkup:index')
  * @param {string} config.ipfsCheckEndpoint IPFS Check backend API URL.
  * @param {string} config.clusterEndpoint IPFS Cluster API URL.
  * @param {string} config.clusterBasicAuthToken IPFS Cluster basic auth token.
+ * @param {string} config.clusterStatusBatchSize IPFS Cluster batch size for status API call.
+ * @param {'universal'|'randomid'} [config.sampleMethod] Sampling method to use:
+ * "universal" works with both products, "randomid" requires sequential IDs on
+ * the `upload` table (i.e. not Web3.Storage). Note that "randomid" is faster!
  * @param {number} [config.port] Port to run the metrics server on.
  */
 export async function startCheckup ({
@@ -27,6 +31,8 @@ export async function startCheckup ({
   ipfsCheckEndpoint,
   clusterEndpoint,
   clusterBasicAuthToken,
+  clusterStatusBatchSize = 120,
+  sampleMethod = 'universal',
   port = 3000
 }) {
   log('connecting to PostgreSQL database...')
@@ -57,8 +63,8 @@ export async function startCheckup ({
 
   try {
     await pipe(
-      getSample(db),
-      selectPeer(cluster),
+      sampleMethod === 'randomid' ? getSampleRandomId(db) : getSample(db),
+      selectPeer(cluster, clusterStatusBatchSize),
       checkCid(ipfsChecker),
       recordMetrics(metrics),
       logResult

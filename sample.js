@@ -31,7 +31,7 @@ async function fetchUploadById (db, id) {
 /**
  * @param {import('pg').Client} db
  */
-export function getSample (db) {
+export function getSampleRandomId (db) {
   return async function * () {
     let min, max
     let lastIdRangeUpdate = -MAX_ID_RANGE_AGE
@@ -42,6 +42,38 @@ export function getSample (db) {
         log(`taking sample between IDs ${min} -> ${max}`)
       }
       const upload = await fetchUploadById(db, randomBigInt(min, max + 1n))
+      if (!upload) continue
+      log(`sample ready: ${upload.source_cid}`)
+      yield /** @type {Sample} */ ({ cid: upload.source_cid })
+    }
+  }
+}
+
+/**
+ * @param {import('pg').Client} db
+ */
+async function estimateUploads (db) {
+  const { rows } = await db.query('SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname = \'upload\'')
+  if (!rows.length) throw new Error('no rows returned estimating uploads')
+  return BigInt(rows[0].estimate)
+}
+
+/**
+ * @param {bigint} offset
+ * @returns {{ source_cid: string }|undefined}
+ */
+async function fetchUploadAtOffset (db, offset) {
+  const { rows } = await db.query('SELECT source_cid FROM upload OFFSET $1 LIMIT 1', [offset.toString()])
+  if (!rows.length) return
+  log(`fetched upload at offset ${offset}: ${rows[0].source_cid}`)
+  return rows[0]
+}
+
+export function getSample (db) {
+  return async function * () {
+    while (true) {
+      const count = await estimateUploads(db)
+      const upload = await fetchUploadAtOffset(db, randomBigInt(1n, count))
       if (!upload) continue
       log(`sample ready: ${upload.source_cid}`)
       yield /** @type {Sample} */ ({ cid: upload.source_cid })
