@@ -54,9 +54,10 @@ export function recordMetrics (metrics) {
     for await (const sample of source) {
       const { peer, result } = sample
       metrics.samplesTotal.inc({ peer: peer || 'unknown' })
-      metrics.dhtProviderRecordsTotal.inc({ peer: peer || 'unknown', found: result.CidInDHT })
 
       if (peer) {
+        metrics.dhtProviderRecordsTotal.inc({ peer, found: result.CidInDHT })
+
         if (result.ConnectionError) {
           metrics.connectionErrorsTotal.inc({ peer })
         } else {
