@@ -29,6 +29,9 @@
     "pg": "^8.7.3",
     "prom-client": "^14.0.1"
   },
+  "devDependencies": {
+    "standard": "^16.0.4"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nftstorage/checkup.git"

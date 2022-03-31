@@ -1,3 +1,4 @@
+/* global AbortController */
 import fetch from '@web-std/fetch'
 
 /**
@@ -14,12 +15,16 @@ import fetch from '@web-std/fetch'
  * }} IpfsCheckResult
  */
 
+const TIMEOUT = 30_000
+
 export class IpfsCheckClient {
   /**
    * @param {string} endpoint
+   * @param {{ timeout?: number }} [options]
    */
-  constructor (endpoint) {
+  constructor (endpoint, options) {
     this.endpoint = endpoint
+    this._options = options || {}
   }
 
   /**
@@ -30,12 +35,21 @@ export class IpfsCheckClient {
     const url = new URL(this.endpoint)
     url.searchParams.set('cid', String(cid))
     url.searchParams.set('multiaddr', String(multiaddr))
-    const res = await fetch(url, { method: 'POST' })
-    if (!res.ok) {
-      throw new Error(`failed to check ${cid} @ ${multiaddr}: ${await res.text()}`)
+
+    const controller = new AbortController()
+    const timeoutMs = this._options.timeout || TIMEOUT
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const res = await fetch(url, { method: 'POST', signal: controller.signal })
+      if (!res.ok) {
+        throw new Error(`failed to check ${cid} @ ${multiaddr}: ${await res.text()}`)
+      }
+      /** @type {IpfsCheckResult} */
+      const out = await res.json()
+      return out
+    } finally {
+      clearTimeout(timeoutId)
     }
-    /** @type {IpfsCheckResult} */
-    const out = await res.json()
-    return out
   }
 }
