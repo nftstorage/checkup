@@ -53,18 +53,19 @@ export function recordMetrics (metrics) {
   return async function * (source) {
     for await (const sample of source) {
       const { peer, result } = sample
-      metrics.samplesTotal.inc({ peer: peer || 'unknown' })
+      const peerId = peer ? peer.split('/p2p/')[1] : 'unknown'
+      metrics.samplesTotal.inc({ peer: peerId })
 
       if (peer) {
-        metrics.dhtProviderRecordsTotal.inc({ peer, found: result.CidInDHT })
+        metrics.dhtProviderRecordsTotal.inc({ peer: peerId, found: result.CidInDHT })
 
         if (result.ConnectionError) {
-          metrics.connectionErrorsTotal.inc({ peer })
+          metrics.connectionErrorsTotal.inc({ peer: peerId })
         } else {
           const { Responded: responded, Found: found } = result.DataAvailableOverBitswap
-          metrics.bitswapRequestsTotal.inc({ peer, responded, found })
+          metrics.bitswapRequestsTotal.inc({ peer: peerId, responded, found })
           metrics.bitswapRequestDurationSeconds.inc(
-            { peer, responded, found },
+            { peer: peerId, responded, found },
             result.DataAvailableOverBitswap.Duration / 1e+9
           )
         }
