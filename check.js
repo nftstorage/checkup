@@ -26,7 +26,7 @@ export function checkCid (checker) {
       }
       log(`checking sample ${sample.cid} @ ${sample.peer}`)
       try {
-        const result = await checker.check(sample.cid, `/p2p/${sample.peer}`)
+        const result = await checker.check(sample.cid, sample.peer)
         yield /** @type {CheckedSample} */ ({ ...sample, result })
       } catch (err) {
         log(`failed to checkup on: ${sample.cid}`, err)

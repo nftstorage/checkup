@@ -18,8 +18,11 @@ const MAX_CLUSTER_STATUS_CIDS = 120
 /**
  * @param {import('@nftstorage/ipfs-cluster').Cluster} cluster
  * @param {number} [batchSize]
+ * @param {Object} [options]
+ * @param {string} [options.elasticProviderAddr]
  */
-export function selectPeer (cluster, batchSize) {
+export function selectPeer (cluster, batchSize, options) {
+  options = options || {}
   batchSize = Math.min(batchSize || MAX_CLUSTER_STATUS_CIDS, MAX_CLUSTER_STATUS_CIDS)
   /**
    * @param {AsyncIterable<Sample>} source
@@ -58,14 +61,20 @@ export function selectPeer (cluster, batchSize) {
         const eligiblePinInfos = pinInfos
           .filter(i => i.status !== 'remote' && i.status !== 'pin_queued')
 
-        const pinInfo = eligiblePinInfos[randomInt(0, eligiblePinInfos.length)]
-        if (!pinInfo) {
+        if (!eligiblePinInfos.length) {
           log(`⚠️ ${status.cid} no eligible pin statuses: ${pinInfos.map(i => i.status)}`)
           continue
         }
 
-        log(`sample ready: ${status.cid} @ ${pinInfo.ipfsPeerId} (${pinInfo.status})`)
-        yield /** @type {PeeredSample} */ ({ cid: status.cid, peer: pinInfo.ipfsPeerId })
+        const eligiblePeers = eligiblePinInfos.map(pi => `/p2p/${pi.ipfsPeerId}`)
+        if (options.elasticProviderAddr) {
+          eligiblePeers.push(options.elasticProviderAddr)
+        }
+
+        const index = randomInt(0, eligiblePeers.length)
+
+        log(`sample ready: ${status.cid} @ ${eligiblePeers[index]} (${eligiblePinInfos[index]?.status || 'unknown'})`)
+        yield /** @type {PeeredSample} */ ({ cid: status.cid, peer: eligiblePeers[index] })
       }
     }
   }

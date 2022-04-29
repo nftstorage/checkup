@@ -14,7 +14,8 @@ CLUSTER_BASIC_AUTH_TOKEN=<value>
 CLUSTER_STATUS_BATCH_SIZE=120 # optional, default (and maximum) shown
 PORT=3000 # optional, default shown
 PROM_NAMESPACE=checkup # optional, default shown
-SAMPLE_METHOD=universal # optional, default shown, also randomid
+SAMPLE_METHOD=universal # optional, default shown, also randomid (nft.storage only)
+ELASTIC_PROVIDER_ADDR=/p2p/Qm... # optional, if set, CIDs will be checked on elastic provider also (assumed ALL CIDs are available here)
 ```
 
 Replace the following values as specified:

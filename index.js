@@ -25,6 +25,7 @@ const log = debug('checkup:index')
  * "universal" works with both products, "randomid" requires sequential IDs on
  * the `upload` table (i.e. not Web3.Storage). Note that "randomid" is faster!
  * @param {number} [config.port] Port to run the metrics server on.
+ * @param {string} [config.elasticProviderAddr] Multiaddr of the elastic provider IPFS node.
  */
 export async function startCheckup ({
   dbConnString,
@@ -33,7 +34,8 @@ export async function startCheckup ({
   clusterBasicAuthToken,
   clusterStatusBatchSize = 120,
   sampleMethod = 'universal',
-  port = 3000
+  port = 3000,
+  elasticProviderAddr
 }) {
   log('connecting to PostgreSQL database...')
   const db = new pg.Client({ connectionString: dbConnString })
@@ -64,7 +66,7 @@ export async function startCheckup ({
   try {
     await pipe(
       sampleMethod === 'randomid' ? getSampleRandomId(db) : getSample(db),
-      selectPeer(cluster, clusterStatusBatchSize),
+      selectPeer(cluster, clusterStatusBatchSize, { elasticProviderAddr }),
       checkCid(ipfsChecker),
       recordMetrics(metrics),
       logResult

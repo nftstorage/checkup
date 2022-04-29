@@ -12,7 +12,8 @@ startCheckup({
   clusterBasicAuthToken: mustGetEnv('CLUSTER_BASIC_AUTH_TOKEN'),
   clusterStatusBatchSize: process.env.CLUSTER_STATUS_BATCH_SIZE && parseInt(process.env.CLUSTER_STATUS_BATCH_SIZE),
   sampleMethod: process.env.SAMPLE_METHOD,
-  port: process.env.PORT
+  port: process.env.PORT,
+  elasticProviderAddr: process.env.ELASTIC_PROVIDER_ADDR
 })
 
 /**
