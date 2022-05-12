@@ -1,5 +1,4 @@
 import debug from 'debug'
-import batch from 'it-batch'
 import { CID } from 'multiformats'
 import { randomInt } from './utils.js'
 
@@ -9,31 +8,28 @@ import { randomInt } from './utils.js'
  */
 
 const log = debug('checkup:peer')
-/**
- * 8k max request length to cluster for statusAll, we hit this at around 126 CIDs
- * http://nginx.org/en/docs/http/ngx_http_core_module.html#large_client_header_buffers
- */
-const MAX_CLUSTER_STATUS_CIDS = 120
+
+const CLUSTER_PEER = 'CLUSTER_PEER'
+const ELASTIC_PROVIDER_PEER = 'ELASTIC_PROVIDER_PEER'
+
+function randomPeerType () {
+  return randomInt(0, 4) < 3 ? CLUSTER_PEER : ELASTIC_PROVIDER_PEER
+}
 
 /**
  * @param {import('@nftstorage/ipfs-cluster').Cluster} cluster
- * @param {number} [batchSize]
- * @param {Object} [options]
- * @param {string} [options.elasticProviderAddr]
+ * @param {import('./elastic-provider').ElasticProvider} [elasticProvider]
  */
-export function selectPeer (cluster, batchSize, options) {
-  options = options || {}
-  batchSize = Math.min(batchSize || MAX_CLUSTER_STATUS_CIDS, MAX_CLUSTER_STATUS_CIDS)
+export function selectPeer (cluster, elasticProvider) {
   /**
    * @param {AsyncIterable<Sample>} source
    * @returns {AsyncIterable<Sample|PeeredSample>}
    */
   return async function * (source) {
-    for await (const samples of batch(source, batchSize)) {
-      log(`retrieving cluster pin statuses for ${samples.length} CIDs`)
-      const statuses = await cluster.statusAll({ cids: samples.map(s => s.cid) })
-
-      for (let status of statuses) {
+    for await (const sample of source) {
+      const peerType = elasticProvider ? randomPeerType() : CLUSTER_PEER
+      if (peerType === CLUSTER_PEER) {
+        let status = await cluster.status(sample.cid)
         let pinInfos = Object.values(status.peerMap)
         if (pinInfos.every(e => e.status === 'unpinned')) {
           log(`⚠️ ${status.cid} is not pinned on ANY peer!`)
@@ -63,18 +59,26 @@ export function selectPeer (cluster, batchSize, options) {
 
         if (!eligiblePinInfos.length) {
           log(`⚠️ ${status.cid} no eligible pin statuses: ${pinInfos.map(i => i.status)}`)
+          yield /** @type {Sample} */ ({ cid: status.cid })
           continue
         }
 
         const eligiblePeers = eligiblePinInfos.map(pi => `/p2p/${pi.ipfsPeerId}`)
-        if (options.elasticProviderAddr) {
-          eligiblePeers.push(options.elasticProviderAddr)
-        }
-
         const index = randomInt(0, eligiblePeers.length)
 
-        log(`sample ready: ${status.cid} @ ${eligiblePeers[index]} (${eligiblePinInfos[index]?.status || 'unknown'})`)
+        log(`sample ready: ${status.cid} @ ${eligiblePeers[index]} (${eligiblePinInfos[index].status})`)
         yield /** @type {PeeredSample} */ ({ cid: status.cid, peer: eligiblePeers[index] })
+      } else if (peerType === ELASTIC_PROVIDER_PEER) {
+        const hasCid = await elasticProvider.has(sample.cid)
+        if (!hasCid) {
+          log(`⚠️ ${sample.cid} not available on Elastic Provider`)
+          yield /** @type {Sample} */ ({ cid: sample.cid })
+          continue
+        }
+        log(`sample ready: ${sample.cid} @ ${elasticProvider.multiaddr} (found on S3)`)
+        yield /** @type {PeeredSample} */ ({ cid: sample.cid, peer: elasticProvider.multiaddr })
+      } else {
+        throw new Error(`unknown peer type: ${peerType}`)
       }
     }
   }

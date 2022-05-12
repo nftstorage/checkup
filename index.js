@@ -9,6 +9,7 @@ import { getSampleRandomId, getSample } from './sample.js'
 import { selectPeer } from './peer.js'
 import { checkCid } from './check.js'
 import { createRegistry, recordMetrics } from './prom.js'
+import { ElasticProvider } from './elastic-provider.js'
 
 globalThis.fetch = fetch
 
@@ -20,22 +21,25 @@ const log = debug('checkup:index')
  * @param {string} config.ipfsCheckEndpoint IPFS Check backend API URL.
  * @param {string} config.clusterEndpoint IPFS Cluster API URL.
  * @param {string} config.clusterBasicAuthToken IPFS Cluster basic auth token.
- * @param {string} config.clusterStatusBatchSize IPFS Cluster batch size for status API call.
  * @param {'universal'|'randomid'} [config.sampleMethod] Sampling method to use:
  * "universal" works with both products, "randomid" requires sequential IDs on
  * the `upload` table (i.e. not Web3.Storage). Note that "randomid" is faster!
  * @param {number} [config.port] Port to run the metrics server on.
- * @param {string} [config.elasticProviderAddr] Multiaddr of the elastic provider IPFS node.
+ * @param {Object} [config.elasticProvider] Configuration for elastic provider.
+ * @param {string} config.elasticProvider.multiaddr Multiaddr of the elastic provider IPFS node.
+ * @param {string} config.elasticProvider.s3Region
+ * @param {string} config.elasticProvider.s3Bucket
+ * @param {string} config.elasticProvider.s3AccessKeyId
+ * @param {string} config.elasticProvider.s3SecretAccessKey
  */
 export async function startCheckup ({
   dbConnString,
   ipfsCheckEndpoint,
   clusterEndpoint,
   clusterBasicAuthToken,
-  clusterStatusBatchSize = 120,
   sampleMethod = 'universal',
   port = 3000,
-  elasticProviderAddr
+  elasticProvider: elasticProviderCfg
 }) {
   log('connecting to PostgreSQL database...')
   const db = new pg.Client({ connectionString: dbConnString })
@@ -43,6 +47,18 @@ export async function startCheckup ({
 
   log('creating IPFS Cluster client...')
   const cluster = new Cluster(clusterEndpoint, { headers: { Authorization: `Basic ${clusterBasicAuthToken}` } })
+
+  /** @type {import('./elastic-provider').ElasticProvider} */
+  let elasticProvider
+  if (elasticProviderCfg) {
+    log('creating Elastic Provider client...')
+    elasticProvider = new ElasticProvider(elasticProviderCfg.multiaddr, {
+      bucket: elasticProviderCfg.s3Bucket,
+      region: elasticProviderCfg.s3Region,
+      accessKeyId: elasticProviderCfg.s3AccessKeyId,
+      secretAccessKey: elasticProviderCfg.s3SecretAccessKey
+    })
+  }
 
   log('creating IPFS Check client...')
   const ipfsChecker = new IpfsCheckClient(ipfsCheckEndpoint)
@@ -66,7 +82,7 @@ export async function startCheckup ({
   try {
     await pipe(
       sampleMethod === 'randomid' ? getSampleRandomId(db) : getSample(db),
-      selectPeer(cluster, clusterStatusBatchSize, { elasticProviderAddr }),
+      selectPeer(cluster, elasticProvider),
       checkCid(ipfsChecker),
       recordMetrics(metrics),
       logResult
