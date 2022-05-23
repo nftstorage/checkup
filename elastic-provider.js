@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3'
+import { S3Client, ListObjectsV2Command, HeadObjectCommand } from '@aws-sdk/client-s3'
 
 export class ElasticProvider {
   /**
@@ -31,15 +31,27 @@ export class ElasticProvider {
    * @param {import('multiformats').CID} cid
    */
   async has (cid) {
-    const listObjects = async dir => {
+    const hasRaw = async pfx => {
       const command = new ListObjectsV2Command({
         Bucket: this._bucketName,
-        Prefix: `${dir}/${cid}`,
+        Prefix: pfx,
         MaxKeys: 1
       })
       const response = await this._s3.send(command)
       return !!(response.Contents && response.Contents.length)
     }
-    return await listObjects('raw') ? true : await listObjects('complete')
+    const hasComplete = async key => {
+      const command = new HeadObjectCommand({
+        Bucket: this._bucketName,
+        Key: key
+      })
+      try {
+        await this._s3.send(command)
+        return true
+      } catch (err) {
+        return false
+      }
+    }
+    return await hasRaw(`raw/${cid}`) ? true : await hasComplete(`complete/${cid}.car`)
   }
 }
