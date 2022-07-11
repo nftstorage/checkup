@@ -104,6 +104,8 @@ async function clusterStatusWithTimeout (cluster, cid, timeout = CLUSTER_STATUS_
   const timeoutId = setTimeout(() => controller.abort(), timeout)
   try {
     return await cluster.status(cid, { signal: controller.signal })
+  } catch (err) {
+    throw new Error(`failed to get pin status for CID: ${cid}`, { cause: err })
   } finally {
     clearTimeout(timeoutId)
   }
