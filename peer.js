@@ -1,3 +1,4 @@
+/* global AbortController */
 import debug from 'debug'
 import { CID } from 'multiformats'
 import { randomInt } from './utils.js'
@@ -11,6 +12,7 @@ const log = debug('checkup:peer')
 
 const CLUSTER_PEER = 'CLUSTER_PEER'
 const ELASTIC_PROVIDER_PEER = 'ELASTIC_PROVIDER_PEER'
+const CLUSTER_STATUS_TIMEOUT = 10_000 // ms
 
 function randomPeerType () {
   return randomInt(0, 4) < 3 ? CLUSTER_PEER : ELASTIC_PROVIDER_PEER
@@ -29,7 +31,7 @@ export function selectPeer (cluster, elasticProvider) {
     for await (const sample of source) {
       const peerType = elasticProvider ? randomPeerType() : CLUSTER_PEER
       if (peerType === CLUSTER_PEER) {
-        let status = await cluster.status(sample.cid)
+        let status = await clusterStatusWithTimeout(cluster, sample.cid)
         let pinInfos = Object.values(status.peerMap)
         if (pinInfos.every(e => e.status === 'unpinned')) {
           log(`⚠️ ${status.cid} is not pinned on ANY peer!`)
@@ -42,7 +44,7 @@ export function selectPeer (cluster, elasticProvider) {
           }
 
           log(`trying other CID version: ${otherCid}`)
-          status = await cluster.status(otherCid)
+          status = await clusterStatusWithTimeout(cluster, otherCid)
           pinInfos = Object.values(status.peerMap)
           if (pinInfos.every(e => e.status === 'unpinned')) {
             log(`⚠️ ${otherCid} is not pinned on ANY peer!`)
@@ -90,4 +92,19 @@ export function selectPeer (cluster, elasticProvider) {
 function toOtherCidVersion (cidStr) {
   const cid = CID.parse(cidStr)
   return String(cid.version === 0 ? cid.toV1() : cid.toV0())
+}
+
+/**
+ * @param {import('@nftstorage/ipfs-cluster').Cluster} cluster
+ * @param {string} cid
+ * @param {number} [timeout]
+ */
+async function clusterStatusWithTimeout (cluster, cid, timeout = CLUSTER_STATUS_TIMEOUT) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  try {
+    return await cluster.status(cid, { signal: controller.signal })
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
