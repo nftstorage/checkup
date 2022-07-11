@@ -1,6 +1,7 @@
 /* global AbortController */
 import debug from 'debug'
 import { CID } from 'multiformats'
+import util from 'util'
 import { randomInt } from './utils.js'
 
 /**
@@ -84,7 +85,7 @@ export function selectPeer (cluster, elasticProvider) {
           throw new Error(`unknown peer type: ${peerType}`)
         }
       } catch (err) {
-        log(new Error(`failed to select peer for sample: ${sample.cid}`, { cause: err }))
+        log(util.inspect(err))
       }
     }
   }
