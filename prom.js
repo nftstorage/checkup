@@ -11,33 +11,39 @@ import * as Prom from 'prom-client'
  */
 
 export function createRegistry (ns = 'checkup') {
+  const registry = new Prom.Registry()
   return {
-    registry: Prom.register,
+    registry,
     metrics: {
       samplesTotal: new Prom.Counter({
         name: `${ns}_samples_total`,
         help: 'Number of random samples taken by peer ID.',
-        labelNames: ['peer']
+        labelNames: ['peer'],
+        registers: [registry]
       }),
       connectionErrorsTotal: new Prom.Counter({
         name: `${ns}_connection_errors_total`,
         help: 'Number of samples taken where we were not able to connect to the target peer.',
-        labelNames: ['peer']
+        labelNames: ['peer'],
+        registers: [registry]
       }),
       dhtProviderRecordsTotal: new Prom.Counter({
         name: `${ns}_dht_provider_records_total`,
         help: 'Provider records found or not found for a CID for the given peer.',
-        labelNames: ['peer', 'found']
+        labelNames: ['peer', 'found'],
+        registers: [registry]
       }),
       bitswapRequestsTotal: new Prom.Counter({
         name: `${ns}_bitswap_requests_total`,
         help: 'Number of bitswap HAVE messages sent to a peer in order to check the peer HAS the sample CID.',
-        labelNames: ['peer', 'responded', 'found']
+        labelNames: ['peer', 'responded', 'found'],
+        registers: [registry]
       }),
       bitswapRequestDurationSeconds: new Prom.Counter({
         name: `${ns}_bitswap_request_duration_seconds`,
         help: 'Time taken to check the peer HAS the sample CID over bitswap.',
-        labelNames: ['peer', 'responded', 'found']
+        labelNames: ['peer', 'responded', 'found'],
+        registers: [registry]
       })
     }
   }
