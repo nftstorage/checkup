@@ -120,6 +120,9 @@ async function logResult (source) {
       if (!result.ConnectionError) {
         log(`\t${result.DataAvailableOverBitswap.Responded ? '🟢' : '🔴'} Bitswap responded`)
         log(`\t${result.DataAvailableOverBitswap.Found ? '🟢' : '🔴'} Bitswap found`)
+        if (!result.DataAvailableOverBitswap.Responded || !result.DataAvailableOverBitswap.Found) {
+          log(`\tCID ${cid}, Peer ${peer}, Bitswap Error: ${result.DataAvailableOverBitswap.Error}`)
+        }
       }
     }
   }
