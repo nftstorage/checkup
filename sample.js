@@ -54,30 +54,21 @@ export function getSampleRandomId (db) {
 }
 
 /**
- * @param {import('pg').Client} db
- */
-async function estimateUploads (db) {
-  const { rows } = await db.query('SELECT reltuples::bigint AS estimate FROM pg_class WHERE relname = \'upload\'')
-  if (!rows.length) throw new Error('no rows returned estimating uploads')
-  return BigInt(rows[0].estimate)
-}
-
-/**
- * @param {bigint} offset
+ * @param {bigint} id
  * @param {number} limit
- * @returns {{ source_cid: string }|undefined}
+ * @returns {Promise<Array<{ source_cid: string }>>}
  */
-async function fetchUploads (db, offset, limit) {
-  const { rows } = await db.query('SELECT source_cid FROM upload OFFSET $1 LIMIT $2', [offset.toString(), limit])
-  rows.forEach((r, i) => log(`fetched upload at offset ${offset} + ${i}: ${r.source_cid}`))
+async function fetchUploadsAfter (db, id, limit) {
+  const { rows } = await db.query('SELECT id, source_cid FROM upload WHERE id >= $1 LIMIT $2', [id.toString(), limit])
+  rows.forEach(r => log(`fetched upload ${r.id}: ${r.source_cid}`))
   return rows
 }
 
 export function getSample (db) {
   return async function * () {
     while (true) {
-      const count = await estimateUploads(db)
-      const uploads = await fetchUploads(db, randomBigInt(1n, count), MAX_UPLOADS_AT_OFFSET)
+      const { min, max } = await fetchUploadIdRange(db)
+      const uploads = await fetchUploadsAfter(db, randomBigInt(min, max), MAX_UPLOADS_AT_OFFSET)
       for (const upload of uploads) {
         log(`sample ready: ${upload.source_cid}`)
         yield /** @type {Sample} */ ({ cid: upload.source_cid })
