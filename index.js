@@ -44,6 +44,7 @@ export async function startCheckup ({
   log('connecting to PostgreSQL database...')
   const db = new pg.Client({ connectionString: dbConnString })
   await db.connect()
+  db.on('error', err => log('PostgreSQL error', err))
 
   log('creating IPFS Cluster client...')
   const cluster = new Cluster(clusterEndpoint, { headers: { Authorization: `Basic ${clusterBasicAuthToken}` } })
